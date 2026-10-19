@@ -11,7 +11,21 @@
 - หลายสกุลเงิน: THB, USD, EUR, JPY, CNY, SGD ยอดรวมแยกตามสกุล (เลือกดูด้วยแท็บเหนือการ์ดสรุป)
 - โหมดสี: อัตโนมัติ (06:00–18:00 สว่าง, 18:00–06:00 มืด) / สว่าง / มืด จำค่าที่เลือกไว้
 - สลับภาษา ไทย / English ทั้งหน้าจอ จำค่าที่เลือกไว้
+- **สแกนสลิป:** ถ่ายรูปหรือเลือกรูปสลิป (หลายใบพร้อมกันได้) ให้ AI (OpenAI) อ่านและเดาประเภท/หมวดให้ ตรวจแก้ก่อนกดบันทึก
+- **หน้าสรุป (`/summary`):** เลือกเดือน + สกุลเงิน ดูกราฟแท่งรายรับ-รายจ่ายรายวัน และกราฟวงกลมรายจ่ายตามหมวด
 - รองรับมือถือ
+
+## ตั้งค่าการสแกนสลิป (ทำครั้งเดียว)
+
+การสแกนสลิปใช้ OpenAI API (รุ่น `gpt-5.4-mini`) ซึ่ง**คิดเงินตามการใช้** ต้องเติมเครดิตในบัญชี OpenAI ก่อน
+
+1. ไปที่ <https://platform.openai.com/api-keys> ล็อกอิน แล้วกด **Create new secret key**
+2. เติมเครดิตที่ <https://platform.openai.com/settings/organization/billing> (ขั้นต่ำ $5)
+3. เปิดไฟล์ `.env.local` (ถ้ายังไม่มี ให้คัดลอกจาก `.env.example`) แล้ววาง key หลัง `OPENAI_API_KEY=` เช่น `OPENAI_API_KEY=sk-...` แล้วบันทึก
+4. ถ้าเปิด `npm.cmd run dev` ค้างไว้ ให้กด `Ctrl + C` แล้วรันใหม่
+
+> ⚠️ รูปสลิปจะถูกส่งไปให้ OpenAI อ่าน (สลิปมีชื่อและเลขบัญชีบางส่วน)
+> ไฟล์ `.env.local` จะไม่ถูกส่งขึ้น GitHub ถ้าขึ้น Vercel ให้ใส่ `OPENAI_API_KEY` ใน Project Settings → Environment Variables
 
 ## วิธีรันแอป (ทีละขั้น)
 
@@ -59,18 +73,26 @@ Windows ตั้งค่าเริ่มต้นไม่ให้ PowerShe
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `src/app/page.tsx` | หน้าหลัก: ถือรายการทั้งหมดและภาษา, เพิ่ม/แก้ไข/ลบ, อ่าน/บันทึก localStorage |
-| `src/app/layout.tsx` | กรอบหน้าเว็บ ฟอนต์ไทย และสคริปต์เลือกโหมดสีก่อนหน้าเว็บแสดง |
-| `src/app/globals.css` | สีหลัก (`--color-brand: #2486ff`) และการตั้งค่าโหมดมืด |
+| `src/app/page.tsx` | หน้าหลัก: ถือรายการทั้งหมด, เพิ่ม/แก้ไข/ลบ, อ่าน/บันทึก localStorage |
+| `src/app/summary/page.tsx` | หน้าสรุป (อ่านข้อมูลอย่างเดียว) |
+| `src/app/api/scan-slip/route.ts` | API ฝั่งเซิร์ฟเวอร์: ส่งรูปสลิปให้ OpenAI อ่าน (API key อยู่ฝั่งนี้เท่านั้น) |
+| `src/app/layout.tsx` | กรอบหน้าเว็บ ฟอนต์ไทย สคริปต์เลือกโหมดสี และครอบทุกหน้าด้วย AppShell |
+| `src/app/globals.css` | สีหลัก (`--color-brand: #2486ff`), การตั้งค่าโหมดมืด และสีของกราฟ |
+| `src/components/AppShell.tsx` | ส่วนหัว + เมนู รายการ/สรุป + ภาษา (ใช้ร่วมกันทุกหน้า) |
+| `src/components/SlipScanner.tsx` | ปุ่มถ่าย/เลือกรูปสลิป และกล่องตรวจรายการก่อนบันทึก |
+| `src/components/SummaryDashboard.tsx` | เนื้อหาหน้าสรุป (เลือกเดือน/สกุล, การ์ด, กราฟ) |
+| `src/components/charts/DailyBarChart.tsx` | กราฟแท่งรายรับ-รายจ่ายรายวัน (SVG) |
+| `src/components/charts/CategoryPieChart.tsx` | กราฟวงกลมรายจ่ายตามหมวด (SVG) |
+| `src/lib/scanSlip.ts` | ย่อรูป, ส่งไปอ่าน, รอแล้วลองใหม่เมื่อโควต้าเต็ม |
 | `src/components/TransactionForm.tsx` | ฟอร์มเพิ่ม/แก้ไขรายการ (ใช้ตัวเดียวกัน) |
 | `src/components/CategoryPicker.tsx` | ปุ่มเลือกหมวดหมู่ |
 | `src/components/TransactionLog.tsx` | ประวัติรายการจัดกลุ่มรายวัน พร้อมปุ่มแก้ไข/ลบ |
 | `src/components/SummaryCards.tsx` | การ์ดสรุป 3 ใบ + แท็บเลือกสกุลเงิน |
-| `src/components/Modal.tsx` | กล่องลอย (ใช้กับแก้ไขและยืนยันลบ) |
+| `src/components/Modal.tsx` | กล่องลอย (ใช้กับแก้ไข ยืนยันลบ และตรวจสลิป) |
 | `src/components/DeleteConfirm.tsx` | เนื้อหากล่องยืนยันลบ |
 | `src/components/ThemeToggle.tsx` / `LanguageToggle.tsx` | ปุ่มสลับโหมดสี / ภาษา |
 | `src/components/Icons.tsx` | ไอคอน SVG (ดินสอ ถังขยะ ดวงอาทิตย์ พระจันทร์ นาฬิกา) |
-| `src/lib/transactions.ts` | ชนิดข้อมูล, อ่าน/เขียน localStorage, แปลงข้อมูลเก่า, รวมยอด, จัดกลุ่มรายวัน, รูปแบบวันที่ |
+| `src/lib/transactions.ts` | ชนิดข้อมูล, อ่าน/เขียน localStorage, แปลงข้อมูลเก่า, รวมยอด, จัดกลุ่มรายวัน, สรุปรายเดือน, รูปแบบวันที่ |
 | `src/lib/currencies.ts` | รายชื่อสกุลเงินและการแสดงจำนวนเงิน |
 | `src/lib/categories.ts` | รายชื่อหมวดหมู่ (ไอคอน + ชื่อไทย/อังกฤษ) |
 | `src/lib/i18n.ts` | ข้อความทุกจุดบนหน้าจอ ภาษาไทยและอังกฤษ |

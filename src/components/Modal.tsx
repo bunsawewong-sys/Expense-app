@@ -4,10 +4,12 @@ type Props = {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  // false = ปิดได้ด้วยปุ่มในกล่องเท่านั้น (กด Esc / คลิกพื้นหลังไม่ปิด) กันข้อมูลที่ยังไม่บันทึกหาย
+  dismissible?: boolean;
 };
 
 // กล่องลอยกลางจอ ใช้ <dialog> ของเบราว์เซอร์: กด Esc ปิดได้ และล็อกหน้าด้านหลังให้เอง
-export default function Modal({ title, onClose, children }: Props) {
+export default function Modal({ title, onClose, children, dismissible = true }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
 
   // เปิดกล่องทันทีที่ component นี้ถูกแสดง
@@ -20,9 +22,13 @@ export default function Modal({ title, onClose, children }: Props) {
     <dialog
       ref={ref}
       onClose={onClose}
+      // กด Esc: ถ้าห้ามปิด ให้ยกเลิกการปิด
+      onCancel={(e) => {
+        if (!dismissible) e.preventDefault();
+      }}
       // คลิกที่พื้นหลังมืด (นอกกล่อง) = ปิด
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (dismissible && e.target === e.currentTarget) onClose();
       }}
       className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl bg-white p-0 text-slate-800 shadow-xl backdrop:bg-slate-900/60 dark:bg-slate-900 dark:text-slate-100"
     >

@@ -126,6 +126,64 @@ export function groupByDate(transactions: Transaction[]): DayGroup[] {
     .map(([date, items]) => ({ date, items, totals: sumByCurrency(items) }));
 }
 
+// ---------- สรุปรายเดือน (หน้าสรุป) ----------
+// เดือนเก็บเป็นข้อความ "YYYY-MM" เช่น "2026-10"
+
+export function currentMonth() {
+  return todayString().slice(0, 7);
+}
+
+// เลื่อนเดือน: shiftMonth("2026-01", -1) → "2025-12"
+export function shiftMonth(month: string, delta: number) {
+  const [year, m] = month.split("-").map(Number);
+  const d = new Date(year, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function filterByMonth(transactions: Transaction[], month: string) {
+  return transactions.filter((t) => t.date.startsWith(`${month}-`));
+}
+
+export type DayTotal = { day: number; date: string; income: number; expense: number };
+
+// ยอดรับ/จ่ายของทุกวันในเดือน (วันที่ไม่มีรายการเป็น 0) — ควรกรองให้เหลือสกุลเดียวก่อนส่งเข้ามา
+export function dailyTotals(transactions: Transaction[], month: string): DayTotal[] {
+  const [year, m] = month.split("-").map(Number);
+  const daysInMonth = new Date(year, m, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => ({
+    day: i + 1,
+    date: `${month}-${String(i + 1).padStart(2, "0")}`,
+    income: 0,
+    expense: 0,
+  }));
+  for (const t of filterByMonth(transactions, month)) {
+    const item = days[Number(t.date.slice(8)) - 1];
+    if (!item) continue;
+    if (t.type === "income") item.income += t.amount;
+    else item.expense += t.amount;
+  }
+  return days.map((d) => ({ ...d, income: round(d.income), expense: round(d.expense) }));
+}
+
+export type CategoryTotal = { category: string; amount: number };
+
+// รายจ่ายรวมแยกตามหมวด เรียงจากมากไปน้อย — ควรกรองให้เหลือสกุลเดียวก่อนส่งเข้ามา
+export function expenseByCategory(transactions: Transaction[]): CategoryTotal[] {
+  const sums = new Map<string, number>();
+  for (const t of transactions) {
+    if (t.type === "expense") sums.set(t.category, (sums.get(t.category) ?? 0) + t.amount);
+  }
+  return [...sums.entries()]
+    .map(([category, amount]) => ({ category, amount: round(amount) }))
+    .sort((a, b) => b.amount - a.amount);
+}
+
+// "2026-10" → "ตุลาคม 2026" / "October 2026"
+export function formatMonth(month: string, lang: Lang) {
+  const [year, m] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat(LOCALES[lang], { month: "long", year: "numeric" }).format(new Date(year, m - 1, 1));
+}
+
 // ---------- ตัวช่วยอื่น ๆ ----------
 
 // สร้างรหัสไม่ซ้ำแบบง่าย ๆ จากเวลา + ตัวเลขสุ่ม
