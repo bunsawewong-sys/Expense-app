@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* คลาส dark: จะทำงานเมื่อ <html data-theme="dark"> (ตั้งค่าโดยสคริปต์ใน layout.tsx และ ThemeToggle) */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* สีประจำแอป: ประกาศครั้งเดียว แล้วเรียกใช้เป็นคลาส เช่น bg-brand, text-brand */
+@theme {
+  --color-brand: #2486ff;
+  --color-brand-dark: #1a6fe0;
+}
+
+/* ให้คลาส font-sans ใช้ฟอนต์ไทยที่โหลดไว้ใน layout.tsx */
+@theme inline {
+  --font-sans: var(--font-noto-sans-thai);
+}
+
+/* บอกเบราว์เซอร์ให้วาดปฏิทิน, dropdown และแถบเลื่อนเป็นสีมืดด้วย */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
