@@ -4,6 +4,7 @@ import { getCategory } from "@/lib/categories";
 import { CURRENCIES, formatMoney, type CurrencyCode } from "@/lib/currencies";
 import type { SessionUser } from "@/lib/server/auth";
 import { formatDate, sumByCurrency, type TransactionInput } from "@/lib/transactions";
+import { env } from "@/lib/server/env";
 
 const MAX_ROWS = 10; // การ์ดยาวเกินไปอ่านยาก แสดงสูงสุด 10 รายการ ที่เหลือบอกเป็นจำนวน
 
@@ -51,7 +52,7 @@ function buildCard(user: SessionUser, items: TransactionInput[]) {
 
   const totals = sumByCurrency(items.map((t, i) => ({ ...t, id: String(i) })));
   const more = items.length - MAX_ROWS;
-  const appUrl = process.env.APP_URL;
+  const appUrl = env("APP_URL");
 
   return {
     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -97,7 +98,7 @@ function buildCard(user: SessionUser, items: TransactionInput[]) {
 // ส่งการ์ด 1 ใบต่อการบันทึก 1 ครั้ง (หลายสลิปพร้อมกัน = 1 ใบรวม)
 // ส่งไม่ผ่านก็ไม่เป็นไร: รายการถูกบันทึกแล้ว แค่เขียน log ไว้
 export async function notifyTransactions(user: SessionUser, items: TransactionInput[]) {
-  const url = process.env.TEAMS_WEBHOOK_URL;
+  const url = env("TEAMS_WEBHOOK_URL");
   if (!url || items.length === 0) return { sent: false as const, reason: "not_configured" };
   try {
     const response = await fetch(url, {

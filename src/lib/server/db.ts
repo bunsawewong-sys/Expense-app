@@ -1,12 +1,10 @@
 // การเชื่อมต่อ Supabase ฝั่งเซิร์ฟเวอร์เท่านั้น (ใช้ service role key ห้าม import ไฟล์นี้ในหน้าเว็บ)
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { env } from "@/lib/server/env";
 
 let client: SupabaseClient<any, "expense_app"> | null = null;
 
 export class ConfigError extends Error {}
-
-// ตัดช่องว่าง/ขึ้นบรรทัด/เครื่องหมายคำพูดที่ติดมาตอนคัดลอกค่าไปวาง (เช่นใน Vercel)
-const clean = (value: string | undefined) => value?.trim().replace(/^["']|["']$/g, "").trim() ?? "";
 
 // บอกชนิดของ key โดยไม่เปิดเผยตัว key (ใช้ตรวจปัญหาใน log): service_role / anon / publishable / unknown
 export function describeKey(key: string) {
@@ -22,8 +20,8 @@ export function describeKey(key: string) {
 
 export function db() {
   if (client) return client;
-  const url = clean(process.env.SUPABASE_URL);
-  const key = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const url = env("SUPABASE_URL");
+  const key = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) throw new ConfigError("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY is not set");
   console.log(`Supabase: ${url} · key type: ${describeKey(key)}`);
   // schema expense_app = ตารางทั้งหมดของแอป / ไม่เก็บ session ของ Supabase Auth (เราทำระบบล็อกอินเอง)

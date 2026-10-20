@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/server/auth";
 import { CATEGORIES, FALLBACK_CATEGORY, isCategoryOf } from "@/lib/categories";
 import { CURRENCIES, DEFAULT_CURRENCY, isCurrencyCode } from "@/lib/currencies";
 import type { ScanErrorCode, ScanResult } from "@/lib/scanSlip";
+import { env } from "@/lib/server/env";
 
 // รุ่น AI ที่ใช้ (รุ่น mini อ่านรูปได้และราคาถูก) เปลี่ยนรุ่นได้ที่นี่ที่เดียว
 const MODEL = "gpt-5.4-mini";
@@ -78,7 +79,7 @@ function parseRetryAfter(headers: Headers | undefined) {
 export async function POST(request: Request) {
   // ต้องล็อกอินก่อน คนนอกจะได้ใช้เครดิต OpenAI ไม่ได้
   if (!(await getCurrentUser().catch(() => null))) return error("unauthorized", 401);
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = env("OPENAI_API_KEY");
   if (!apiKey) return error("no_key", 500);
 
   // 1) รับรูปจากเบราว์เซอร์
