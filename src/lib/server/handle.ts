@@ -6,7 +6,8 @@ export async function handle(fn: () => Promise<Response>) {
     return await fn();
   } catch (err) {
     if (err instanceof ConfigError) return Response.json({ error: "no_db" }, { status: 500 });
-    console.error(err);
+    // error จาก Supabase เป็น object ธรรมดา: แสดง message/code ให้อ่านง่ายใน log
+    console.error("API error:", err instanceof Error ? err : JSON.stringify(err));
     return Response.json({ error: "server" }, { status: 500 });
   }
 }
