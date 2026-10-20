@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
 import CategoryPicker from "@/components/CategoryPicker";
+import LocationField from "@/components/LocationField";
 import { isCategoryOf } from "@/lib/categories";
 import { CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/lib/currencies";
 import { useI18n, type Messages } from "@/lib/i18n";
-import { todayString, type TransactionInput, type TransactionType } from "@/lib/transactions";
+import { todayString, type TransactionInput, type TransactionLocation, type TransactionType } from "@/lib/transactions";
 
 type Props = {
   initial?: TransactionInput; // มีค่า = โหมดแก้ไข (กรอกข้อมูลเดิมไว้ให้)
@@ -23,6 +24,9 @@ export default function TransactionForm({ initial, submitLabel, onSubmit, onCanc
   const [currency, setCurrency] = useState<CurrencyCode>(initial?.currency ?? DEFAULT_CURRENCY);
   const [date, setDate] = useState(initial?.date ?? todayString());
   const [note, setNote] = useState(initial?.note ?? "");
+  const [location, setLocation] = useState<TransactionLocation | null>(initial?.location ?? null);
+  // โหมดเพิ่ม: หาตำแหน่งทันทีที่เปิดฟอร์ม (1) / โหมดแก้ไข: ใช้ตำแหน่งเดิม ไม่หาใหม่จนกว่าจะกดปุ่ม (0)
+  const [locateSignal, setLocateSignal] = useState(initial ? 0 : 1);
   // เก็บเป็น "ชื่อข้อความ" แทนตัวข้อความ จะได้เปลี่ยนภาษาตามได้ทันที
   const [error, setError] = useState<keyof Messages | null>(null);
 
@@ -40,7 +44,7 @@ export default function TransactionForm({ initial, submitLabel, onSubmit, onCanc
     if (!(value > 0)) return setError("errorAmount");
     if (!date) return setError("errorDate");
 
-    onSubmit({ date, type, category, amount: value, currency, note: note.trim() });
+    onSubmit({ date, type, category, amount: value, currency, note: note.trim(), location: location && { ...location, name: location.name.trim() } });
     setError(null);
 
     // โหมดเพิ่ม: ล้างช่อง เหลือประเภท วันที่ และสกุลเงินไว้ เผื่อกรอกรายการต่อไป
@@ -48,6 +52,7 @@ export default function TransactionForm({ initial, submitLabel, onSubmit, onCanc
       setCategory("");
       setAmount("");
       setNote("");
+      setLocateSignal((n) => n + 1); // รายการถัดไปอาจอยู่คนละที่ หาตำแหน่งใหม่
     }
   }
 
@@ -116,6 +121,8 @@ export default function TransactionForm({ initial, submitLabel, onSubmit, onCanc
           className={`${input} w-full`}
         />
       </label>
+
+      <LocationField value={location} onChange={setLocation} locateSignal={locateSignal} />
 
       {error && (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">{t[error]}</p>

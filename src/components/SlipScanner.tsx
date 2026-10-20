@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { CameraIcon, ImageIcon, PencilIcon, XIcon } from "@/components/Icons";
+import LocationLink from "@/components/LocationLink";
 import Modal from "@/components/Modal";
 import TransactionForm from "@/components/TransactionForm";
 import { getCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/currencies";
 import { useI18n } from "@/lib/i18n";
 import { SCAN_ERROR_MESSAGE, runWithLimit, scanSlip, type ScanErrorCode } from "@/lib/scanSlip";
-import { formatDate, todayString, type TransactionInput } from "@/lib/transactions";
+import { getCurrentLocation } from "@/lib/location";
+import { formatDate, todayString, type TransactionInput, type TransactionLocation } from "@/lib/transactions";
 
 // สลิป 1 ใบในกล่องตรวจ
 type Item = {
@@ -29,6 +31,8 @@ export default function SlipScanner({ onSave }: { onSave: (items: TransactionInp
   const round = useRef(0);
   const cameraInput = useRef<HTMLInputElement>(null);
   const pickInput = useRef<HTMLInputElement>(null);
+  // ตำแหน่งของสลิปชุดนี้ (หาครั้งเดียวตอนเริ่มสแกน ใช้กับทุกใบ) / undefined = ยังหาไม่เสร็จ
+  const batchLocation = useRef<TransactionLocation | null | undefined>(undefined);
 
   // ออกจากหน้านี้ระหว่างสแกน → หยุดรับผล
   useEffect(() => () => void round.current++, []);
@@ -49,6 +53,17 @@ export default function SlipScanner({ onSave }: { onSave: (items: TransactionInp
     setEditingId(null);
     setOpen(true);
 
+    // หาตำแหน่งไปพร้อมกับอ่านสลิป ได้แล้วใส่ให้ทุกใบที่อ่านเสร็จ (ใบที่เสร็จทีหลังจะได้ตอนอ่านเสร็จ)
+    batchLocation.current = undefined;
+    getCurrentLocation(lang).then((result) => {
+      if (round.current !== myRound) return;
+      const location = result.ok ? result.location : null;
+      batchLocation.current = location;
+      setItems((prev) =>
+        prev.map((it) => (it.transaction && it.transaction.location === undefined ? { ...it, transaction: { ...it.transaction, location } } : it)),
+      );
+    });
+
     // อ่านทีละไม่เกิน 2 ใบพร้อมกัน (โควต้าฟรีต่อนาทีมีจำกัด)
     await runWithLimit(jobs, 2, async ({ file, id }) => {
       if (round.current !== myRound) return;
@@ -61,7 +76,8 @@ export default function SlipScanner({ onSave }: { onSave: (items: TransactionInp
       else if (!outcome.result.isSlip) update(id, { status: "not_slip" });
       else {
         const tx = outcome.result.transaction;
-        update(id, { status: "done", transaction: { ...tx, date: tx.date ?? today } });
+        const location = batchLocation.current;
+        update(id, { status: "done", transaction: { ...tx, date: tx.date ?? today, ...(location !== undefined && { location }) } });
       }
     });
   }
@@ -86,7 +102,11 @@ export default function SlipScanner({ onSave }: { onSave: (items: TransactionInp
   const editing = items.find((it) => it.id === editingId && it.transaction);
 
   function saveAll() {
-    onSave(ready.map((it) => it.transaction!));
+    // กดบันทึกก่อนหาตำแหน่งเสร็จ: ใบนั้นไม่ระบุตำแหน่ง
+    // (ใบที่ผู้ใช้กด ✕ ลบตำแหน่งเอง = null ต้องคงเป็น null)
+    onSave(
+      ready.map(({ transaction: tx }) => ({ ...tx!, location: tx!.location !== undefined ? tx!.location : (batchLocation.current ?? null) })),
+    );
     close();
   }
 
@@ -194,6 +214,7 @@ function ScanRow({ item, onEdit, onRemove }: { item: Item; onEdit: () => void; o
               {formatDate(tx.date, lang)}
               {tx.note && ` · ${tx.note}`}
             </p>
+            <LocationLink location={tx.location} />
           </>
         ) : item.status === "reading" || item.status === "waiting" ? (
           <p className="flex items-center gap-2 text-slate-500 dark:text-slate-400">

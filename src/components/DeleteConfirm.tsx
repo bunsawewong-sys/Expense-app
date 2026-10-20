@@ -1,3 +1,4 @@
+import LocationLink from "@/components/LocationLink";
 import { getCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/currencies";
 import { useI18n } from "@/lib/i18n";
@@ -25,6 +26,7 @@ export default function DeleteConfirm({ transaction, onConfirm, onCancel }: Prop
             {formatDate(transaction.date, lang)}
             {transaction.note && ` · ${transaction.note}`}
           </p>
+          <LocationLink location={transaction.location} />
         </div>
         <p className={`shrink-0 font-semibold ${isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
           {isIncome ? "+" : "−"}

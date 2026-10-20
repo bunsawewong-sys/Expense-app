@@ -1,6 +1,7 @@
 // การเชื่อมต่อ Supabase ฝั่งเซิร์ฟเวอร์เท่านั้น (ใช้ service role key ห้าม import ไฟล์นี้ในหน้าเว็บ)
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "@/lib/server/env";
+import type { TransactionLocation } from "@/lib/transactions";
 
 let client: SupabaseClient<any, "expense_app"> | null = null;
 
@@ -42,10 +43,25 @@ export type TransactionRow = {
   amount: string | number;
   currency: string;
   note: string;
+  location_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_accuracy_m: number | null;
   users?: { display_name: string } | null;
 };
 
-export const TRANSACTION_SELECT = "id, user_id, date, type, category, amount, currency, note, users!transactions_user_id_fkey(display_name)";
+export const TRANSACTION_SELECT =
+  "id, user_id, date, type, category, amount, currency, note, location_name, latitude, longitude, location_accuracy_m, users!transactions_user_id_fkey(display_name)";
+
+// ไม่มีทั้งชื่อและพิกัด = ไม่ระบุตำแหน่ง (เช่น รายการเก่าก่อนมีฟีเจอร์นี้)
+function toLocation(row: TransactionRow): TransactionLocation | null {
+  if (row.latitude == null && !row.location_name) return null;
+  return {
+    name: row.location_name ?? "",
+    ...(row.latitude != null && row.longitude != null ? { lat: row.latitude, lon: row.longitude } : {}),
+    ...(row.location_accuracy_m != null ? { accuracy: row.location_accuracy_m } : {}),
+  };
+}
 
 export function toTransaction(row: TransactionRow) {
   return {
@@ -58,5 +74,6 @@ export function toTransaction(row: TransactionRow) {
     amount: Number(row.amount),
     currency: row.currency,
     note: row.note,
+    location: toLocation(row),
   };
 }

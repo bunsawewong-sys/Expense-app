@@ -5,6 +5,7 @@ import { CURRENCIES, formatMoney, type CurrencyCode } from "@/lib/currencies";
 import type { SessionUser } from "@/lib/server/auth";
 import { formatDate, sumByCurrency, type TransactionInput } from "@/lib/transactions";
 import { env } from "@/lib/server/env";
+import { locationLabel, mapsUrl } from "@/lib/location";
 
 const MAX_ROWS = 10; // การ์ดยาวเกินไปอ่านยาก แสดงสูงสุด 10 รายการ ที่เหลือบอกเป็นจำนวน
 
@@ -30,6 +31,10 @@ function buildCard(user: SessionUser, items: TransactionInput[]) {
           items: [
             { type: "TextBlock", text: `${category.name.th} · ${isIncome ? "รายรับ" : "รายจ่าย"}`, weight: "Bolder", wrap: true },
             { type: "TextBlock", text: [formatDate(t.date, "th"), t.note].filter(Boolean).join(" · "), isSubtle: true, spacing: "None", wrap: true, size: "Small" },
+            // 📍 ชื่อสถานที่ กดแล้วเปิด Google Maps (ไม่มีตำแหน่ง = ไม่แสดงบรรทัดนี้)
+            ...(t.location && locationLabel(t.location)
+              ? [{ type: "TextBlock", text: `📍 [${locationLabel(t.location).replace(/[[\]]/g, "")}](${mapsUrl(t.location)})`, spacing: "None", wrap: true, size: "Small" }]
+              : []),
           ],
         },
         {

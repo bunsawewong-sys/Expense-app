@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PencilIcon, TrashIcon } from "@/components/Icons";
+import LocationLink from "@/components/LocationLink";
 import { getCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/currencies";
 import { useI18n } from "@/lib/i18n";
@@ -94,6 +95,7 @@ function TransactionRow({ item, onEdit, onDelete, showOwner }: { item: Transacti
             {item.note}
           </p>
         )}
+        <LocationLink location={item.location} />
       </div>
       <p
         className={`shrink-0 text-sm font-semibold sm:text-base ${

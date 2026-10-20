@@ -16,6 +16,15 @@ export type Transaction = {
   note: string; // หมายเหตุ (ว่างได้)
   userId?: string; // เจ้าของรายการ (มาจาก database)
   ownerName?: string; // ชื่อเจ้าของ (admin ใช้ดูว่าเป็นของใคร)
+  location?: TransactionLocation | null; // บันทึกที่ไหน (ว่างได้)
+};
+
+// ตำแหน่งที่บันทึก: ชื่อสถานที่ (แก้เองได้) + พิกัด GPS (ไม่มีก็ได้ ถ้าพิมพ์ชื่อเอง)
+export type TransactionLocation = {
+  name: string; // เช่น "ปทุมวัน, กรุงเทพมหานคร"
+  lat?: number;
+  lon?: number;
+  accuracy?: number; // ความแม่นยำ (เมตร)
 };
 
 // ข้อมูลจากฟอร์ม (ยังไม่มี id)

@@ -126,6 +126,19 @@ const th = {
   errForbidden: "ไม่มีสิทธิ์ทำรายการนี้",
   errInvalid: "ข้อมูลไม่ถูกต้อง",
   errNotFound: "ไม่พบรายการนี้",
+  location: "ตำแหน่ง",
+  locationPlaceholder: "ชื่อสถานที่ (ไม่บังคับ)",
+  locating: "กำลังหาตำแหน่ง…",
+  locationNone: "ไม่ระบุตำแหน่ง",
+  locationRefresh: "ใช้ตำแหน่งปัจจุบัน",
+  locationClear: "ไม่ระบุตำแหน่ง",
+  locationDenied: "ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง พิมพ์ชื่อสถานที่เองได้",
+  locationUnavailable: "หาตำแหน่งไม่เจอ พิมพ์ชื่อสถานที่เองได้",
+  locationTimeout: "หาตำแหน่งนานเกินไป กดปุ่มเป้าเล็งเพื่อลองใหม่",
+  locationUnsupported: "เบราว์เซอร์นี้หาตำแหน่งไม่ได้ พิมพ์ชื่อสถานที่เองได้",
+  locationAccuracy: "แม่นยำประมาณ ± {n} ม.",
+  locationGpsOnly: "หาชื่อสถานที่ไม่ได้ ใช้พิกัดแทน (แก้ชื่อเองได้)",
+  viewMap: "ดูแผนที่",
 };
 
 export type Messages = typeof th;
@@ -249,6 +262,19 @@ const en: Messages = {
   errForbidden: "You don't have permission for this",
   errInvalid: "Invalid data",
   errNotFound: "Not found",
+  location: "Location",
+  locationPlaceholder: "Place name (optional)",
+  locating: "Finding your location…",
+  locationNone: "No location",
+  locationRefresh: "Use current location",
+  locationClear: "Remove location",
+  locationDenied: "Location permission denied. You can type a place name.",
+  locationUnavailable: "Couldn't find your location. You can type a place name.",
+  locationTimeout: "Location took too long. Tap the target button to retry.",
+  locationUnsupported: "This browser can't detect location. You can type a place name.",
+  locationAccuracy: "Accurate to about ± {n} m",
+  locationGpsOnly: "No place name found, showing coordinates (you can edit it)",
+  viewMap: "View map",
 };
 
 export const MESSAGES: Record<Lang, Messages> = { th, en };

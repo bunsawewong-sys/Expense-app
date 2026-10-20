@@ -1,7 +1,7 @@
 import { requireUser, type SessionUser } from "@/lib/server/auth";
 import { TRANSACTION_SELECT, db, toTransaction, type TransactionRow } from "@/lib/server/db";
 import { handle, readJson } from "@/lib/server/handle";
-import { parseTransaction } from "@/lib/server/validate";
+import { parseTransaction, toColumns } from "@/lib/server/validate";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/transactio
     if (!input) return Response.json({ error: "invalid" }, { status: 400 });
 
     // แก้ได้เฉพาะข้อมูลรายการ เจ้าของเดิมคงเดิม
-    const { data, error } = await db().from("transactions").update(input).eq("id", id).select(TRANSACTION_SELECT).single();
+    const { data, error } = await db().from("transactions").update(toColumns(input)).eq("id", id).select(TRANSACTION_SELECT).single();
     if (error) throw error;
     return Response.json({ transaction: toTransaction(data as unknown as TransactionRow) });
   });
