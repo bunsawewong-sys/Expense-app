@@ -5,11 +5,27 @@ let client: SupabaseClient<any, "expense_app"> | null = null;
 
 export class ConfigError extends Error {}
 
+// ตัดช่องว่าง/ขึ้นบรรทัด/เครื่องหมายคำพูดที่ติดมาตอนคัดลอกค่าไปวาง (เช่นใน Vercel)
+const clean = (value: string | undefined) => value?.trim().replace(/^["']|["']$/g, "").trim() ?? "";
+
+// บอกชนิดของ key โดยไม่เปิดเผยตัว key (ใช้ตรวจปัญหาใน log): service_role / anon / publishable / unknown
+export function describeKey(key: string) {
+  if (key.startsWith("sb_secret_")) return "secret";
+  if (key.startsWith("sb_publishable_")) return "publishable (ผิด: ต้องใช้ service_role/secret)";
+  try {
+    const role = JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString()).role;
+    return role === "service_role" ? "service_role" : `${role} (ผิด: ต้องใช้ service_role)`;
+  } catch {
+    return `unknown (length ${key.length})`;
+  }
+}
+
 export function db() {
   if (client) return client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = clean(process.env.SUPABASE_URL);
+  const key = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (!url || !key) throw new ConfigError("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY is not set");
+  console.log(`Supabase: ${url} · key type: ${describeKey(key)}`);
   // schema expense_app = ตารางทั้งหมดของแอป / ไม่เก็บ session ของ Supabase Auth (เราทำระบบล็อกอินเอง)
   client = createClient<any, "expense_app">(url, key, {
     db: { schema: "expense_app" },
