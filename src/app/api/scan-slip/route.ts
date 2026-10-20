@@ -1,6 +1,7 @@
 // API อ่านสลิป: เบราว์เซอร์ส่งรูปมา → ส่งต่อให้ OpenAI อ่าน → ตอบกลับเป็นข้อมูลรายการ
 // ไฟล์นี้ทำงานบนเซิร์ฟเวอร์เท่านั้น API key จึงไม่หลุดไปถึงเบราว์เซอร์
 import OpenAI from "openai";
+import { getCurrentUser } from "@/lib/server/auth";
 import { CATEGORIES, FALLBACK_CATEGORY, isCategoryOf } from "@/lib/categories";
 import { CURRENCIES, DEFAULT_CURRENCY, isCurrencyCode } from "@/lib/currencies";
 import type { ScanErrorCode, ScanResult } from "@/lib/scanSlip";
@@ -75,6 +76,8 @@ function parseRetryAfter(headers: Headers | undefined) {
 }
 
 export async function POST(request: Request) {
+  // ต้องล็อกอินก่อน คนนอกจะได้ใช้เครดิต OpenAI ไม่ได้
+  if (!(await getCurrentUser().catch(() => null))) return error("unauthorized", 401);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return error("no_key", 500);
 

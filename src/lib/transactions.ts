@@ -14,6 +14,8 @@ export type Transaction = {
   amount: number;
   currency: CurrencyCode;
   note: string; // หมายเหตุ (ว่างได้)
+  userId?: string; // เจ้าของรายการ (มาจาก database)
+  ownerName?: string; // ชื่อเจ้าของ (admin ใช้ดูว่าเป็นของใคร)
 };
 
 // ข้อมูลจากฟอร์ม (ยังไม่มี id)
@@ -51,8 +53,8 @@ function backupOnce(raw: string) {
   if (localStorage.getItem(BACKUP_KEY) === null) localStorage.setItem(BACKUP_KEY, raw);
 }
 
-// อ่านรายการทั้งหมดที่เคยบันทึกไว้ (ถ้ายังไม่มี ให้เริ่มจากว่าง)
-export function loadTransactions(): Transaction[] {
+// อ่านรายการเดิมที่แอปเวอร์ชันก่อนเก็บไว้ใน localStorage (ใช้ตอน "นำเข้า" เข้า database เท่านั้น)
+export function loadLocalTransactions(): Transaction[] {
   let saved: string | null = null;
   try {
     saved = localStorage.getItem(STORAGE_KEY);
@@ -73,13 +75,13 @@ export function loadTransactions(): Transaction[] {
   }
 }
 
-// บันทึกรายการทั้งหมดลงเบราว์เซอร์ (localStorage เก็บได้แค่ข้อความ จึงแปลงเป็น JSON ก่อน)
-export function saveTransactions(transactions: Transaction[]) {
+// นำเข้า database แล้ว → ย้ายข้อมูลเดิมไปเก็บที่ key สำรอง (ไม่ลบทิ้ง) แถบนำเข้าจะได้ไม่ขึ้นซ้ำ
+export function archiveLocalTransactions() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  } catch {
-    // เช่น โหมดไม่ระบุตัวตนบางเบราว์เซอร์ที่ไม่ยอมให้บันทึก: แอปยังใช้ต่อได้ แค่ไม่จำข้อมูล
-  }
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) localStorage.setItem(`${STORAGE_KEY}:imported`, saved);
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
 }
 
 // ---------- รวมยอด ----------

@@ -1,70 +1,97 @@
-"use client"; // หน้านี้ต้องทำงานในเบราว์เซอร์ เพราะใช้ localStorage และรับการกดปุ่ม
+"use client"; // หน้านี้ต้องทำงานในเบราว์เซอร์ เพราะรับการกดปุ่ม
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DeleteConfirm from "@/components/DeleteConfirm";
+import ImportBanner from "@/components/ImportBanner";
 import Modal from "@/components/Modal";
+import OwnerFilter from "@/components/OwnerFilter";
 import SlipScanner from "@/components/SlipScanner";
 import SummaryCards from "@/components/SummaryCards";
 import TransactionForm from "@/components/TransactionForm";
 import TransactionLog from "@/components/TransactionLog";
+import { api, errorText } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import {
-  createId,
-  loadTransactions,
-  saveTransactions,
-  type Transaction,
-  type TransactionInput,
-} from "@/lib/transactions";
+import { useSession } from "@/lib/session";
+import type { Transaction, TransactionInput } from "@/lib/transactions";
 
-// ส่วนหัว เมนู และภาษา อยู่ใน AppShell (layout.tsx) หน้านี้ดูแลแค่รายการ
+// ข้อมูลอยู่ใน database (Supabase) ผ่าน API: user เห็นของตัวเอง / admin เห็นทุกคน
 export default function Home() {
   const { t } = useI18n();
+  const { user } = useSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState(""); // admin: "" = ทุกคน
   const [editing, setEditing] = useState<Transaction | null>(null); // รายการที่กำลังแก้ไข
   const [deleting, setDeleting] = useState<Transaction | null>(null); // รายการที่รอยืนยันลบ
 
-  // จังหวะที่ 1: เปิดหน้าเว็บครั้งแรก → ดึงข้อมูลเก่าจาก localStorage
+  const reload = useCallback(async () => {
+    try {
+      setTransactions(await api.listTransactions(ownerFilter || undefined));
+      setError("");
+    } catch (err) {
+      setError(`${t.loadFailed}: ${errorText(t, err)}`);
+    } finally {
+      setLoaded(true);
+    }
+  }, [ownerFilter, t]);
+
+  // ล็อกอินแล้ว (หรือเปลี่ยนตัวกรอง) → โหลดรายการจากเซิร์ฟเวอร์
   useEffect(() => {
-    setTransactions(loadTransactions());
-    setLoaded(true);
-  }, []);
+    if (user) reload();
+  }, [user, reload]);
 
-  // จังหวะที่ 2: ทุกครั้งที่รายการเปลี่ยน → บันทึกลง localStorage
-  // (รอให้โหลดเสร็จก่อน ไม่งั้นจะเอารายการว่างไปเขียนทับข้อมูลเก่า)
-  useEffect(() => {
-    if (loaded) saveTransactions(transactions);
-  }, [transactions, loaded]);
-
-  function addTransaction(input: TransactionInput) {
-    setTransactions((prev) => [{ ...input, id: createId() }, ...prev]);
+  // ทุกการบันทึกส่งไปที่เซิร์ฟเวอร์ก่อน สำเร็จแล้วค่อยอัปเดตหน้าจอ
+  async function run(action: () => Promise<void>) {
+    try {
+      await action();
+      setError("");
+    } catch (err) {
+      setError(errorText(t, err));
+    }
   }
 
-  // เพิ่มหลายรายการในครั้งเดียว (ใช้กับรายการจากสลิป)
-  function addMany(inputs: TransactionInput[]) {
-    setTransactions((prev) => [...inputs.map((input) => ({ ...input, id: createId() })), ...prev]);
-  }
+  // เพิ่ม 1 รายการ หรือหลายรายการจากสลิป (เซิร์ฟเวอร์ส่งแจ้งเตือนเข้า Teams ให้)
+  const addMany = (inputs: TransactionInput[]) =>
+    run(async () => {
+      const created = await api.createTransactions(inputs);
+      // admin ที่กรองดูคนอื่นอยู่: รายการใหม่เป็นของตัวเอง จึงไม่ต้องแทรกลงหน้าจอ
+      if (!ownerFilter || ownerFilter === user?.id) setTransactions((prev) => [...created, ...prev]);
+    });
 
-  function updateTransaction(input: TransactionInput) {
-    if (!editing) return;
-    const id = editing.id;
-    setTransactions((prev) => prev.map((x) => (x.id === id ? { ...input, id } : x)));
-    setEditing(null);
-  }
+  const updateTransaction = (input: TransactionInput) =>
+    run(async () => {
+      if (!editing) return;
+      const updated = await api.updateTransaction(editing.id, input);
+      setTransactions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      setEditing(null);
+    });
 
-  function confirmDelete() {
-    if (!deleting) return;
-    const id = deleting.id;
-    setTransactions((prev) => prev.filter((x) => x.id !== id));
-    setDeleting(null);
-  }
+  const confirmDelete = () =>
+    run(async () => {
+      if (!deleting) return;
+      await api.deleteTransaction(deleting.id);
+      setTransactions((prev) => prev.filter((x) => x.id !== deleting.id));
+      setDeleting(null);
+    });
 
-  if (!loaded) return null;
+  if (!user || !loaded) return null;
 
   const card = "rounded-2xl bg-white p-4 shadow-sm sm:p-5 dark:bg-slate-900";
+  const isAdmin = user.role === "admin";
 
   return (
     <>
+      <ImportBanner onImported={reload} />
+
+      {error && <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">{error}</p>}
+
+      {isAdmin && (
+        <div className="flex justify-end">
+          <OwnerFilter value={ownerFilter} onChange={setOwnerFilter} />
+        </div>
+      )}
+
       <SummaryCards transactions={transactions} />
 
       {/* จอเล็ก: เรียงลงมาคอลัมน์เดียว / จอใหญ่ (lg): ฟอร์มซ้าย กว้าง 380px, ประวัติขวา */}
@@ -72,26 +99,21 @@ export default function Home() {
         <section className={card}>
           <h2 className="mb-4 text-lg font-semibold">{t.addTitle}</h2>
           <SlipScanner onSave={addMany} />
-          <TransactionForm submitLabel={t.addButton} onSubmit={addTransaction} />
+          <TransactionForm submitLabel={t.addButton} onSubmit={(input) => addMany([input])} />
         </section>
 
         <section className={card}>
           <h2 className="mb-3 text-lg font-semibold">
             {t.historyTitle} <span className="text-slate-400">({transactions.length})</span>
           </h2>
-          <TransactionLog transactions={transactions} onEdit={setEditing} onDelete={setDeleting} />
+          <TransactionLog transactions={transactions} onEdit={setEditing} onDelete={setDeleting} showOwner={isAdmin} />
         </section>
       </div>
 
       {/* กล่องแก้ไข: ใช้ฟอร์มเดียวกับตอนเพิ่ม แต่กรอกข้อมูลเดิมไว้ให้ */}
       {editing && (
         <Modal title={t.editTitle} onClose={() => setEditing(null)}>
-          <TransactionForm
-            initial={editing}
-            submitLabel={t.save}
-            onSubmit={updateTransaction}
-            onCancel={() => setEditing(null)}
-          />
+          <TransactionForm initial={editing} submitLabel={t.save} onSubmit={updateTransaction} onCancel={() => setEditing(null)} />
         </Modal>
       )}
 

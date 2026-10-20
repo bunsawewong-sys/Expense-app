@@ -16,10 +16,11 @@ type Props = {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  showOwner?: boolean; // admin: แสดงชื่อเจ้าของรายการ
 };
 
 // ประวัติรายการ จัดกลุ่มตามวัน (วันล่าสุดอยู่บน)
-export default function TransactionLog({ transactions, onEdit, onDelete }: Props) {
+export default function TransactionLog({ transactions, onEdit, onDelete, showOwner }: Props) {
   const { t } = useI18n();
 
   if (transactions.length === 0) {
@@ -33,7 +34,7 @@ export default function TransactionLog({ transactions, onEdit, onDelete }: Props
           <DayHeader date={group.date} totals={group.totals} />
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {group.items.map((item) => (
-              <TransactionRow key={item.id} item={item} onEdit={onEdit} onDelete={onDelete} />
+              <TransactionRow key={item.id} item={item} onEdit={onEdit} onDelete={onDelete} showOwner={showOwner} />
             ))}
           </ul>
         </section>
@@ -70,7 +71,7 @@ function DayHeader({ date, totals }: { date: string; totals: CurrencyTotals[] })
   );
 }
 
-function TransactionRow({ item, onEdit, onDelete }: { item: Transaction } & Omit<Props, "transactions">) {
+function TransactionRow({ item, onEdit, onDelete, showOwner }: { item: Transaction } & Omit<Props, "transactions">) {
   const { t, lang } = useI18n();
   const category = getCategory(item.type, item.category);
   const isIncome = item.type === "income";
@@ -86,7 +87,13 @@ function TransactionRow({ item, onEdit, onDelete }: { item: Transaction } & Omit
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{category.name[lang]}</p>
-        {item.note && <p className="truncate text-sm text-slate-500 dark:text-slate-400">{item.note}</p>}
+        {(item.note || (showOwner && item.ownerName)) && (
+          <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+            {showOwner && item.ownerName && <span className="font-medium text-brand">👤 {item.ownerName}</span>}
+            {showOwner && item.ownerName && item.note && " · "}
+            {item.note}
+          </p>
+        )}
       </div>
       <p
         className={`shrink-0 text-sm font-semibold sm:text-base ${

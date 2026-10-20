@@ -8,10 +8,11 @@ export type ScannedTransaction = Omit<TransactionInput, "date"> & { date: string
 
 export type ScanResult = { isSlip: false } | { isSlip: true; transaction: ScannedTransaction };
 
-export type ScanErrorCode = "no_key" | "bad_key" | "quota" | "service" | "unreadable" | "bad_request" | "network";
+export type ScanErrorCode = "unauthorized" | "no_key" | "bad_key" | "quota" | "service" | "unreadable" | "bad_request" | "network";
 
 // รหัส error → ข้อความในหน้าจอ (ดูใน i18n.ts)
 export const SCAN_ERROR_MESSAGE: Record<ScanErrorCode, keyof Messages> = {
+  unauthorized: "errUnauthorized",
   no_key: "errNoKey",
   bad_key: "errBadKey",
   quota: "errQuota",
